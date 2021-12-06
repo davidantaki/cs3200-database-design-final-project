@@ -16,28 +16,32 @@ grant execute on energy_app.* to 'energy_app_user'@'%';
 show grants for energy_app_user;
 select * from mysql.user;
 --  -------------------------------------------------------------------------------------------------------------------------------
+drop table if exists properties;
 drop table if exists users;
+
 create table if not exists users(
-	userID int not null unique auto_increment primary key,
-    username varchar(255) not null unique,
+    username varchar(256) not null unique primary key,
     passwordHash binary(32) not null
 );
 
-select * from users;
--- replace into users (username, passwordHash) VALUES("test", md5("1234"));
-
--- create table if not exists utilityBills(
--- 	
--- );
-
-
+create table if not exists properties (
+    address varchar(256) not null,
+    city varchar(256) not null,
+    state varchar(2) not null,
+    zipcode varchar(32) not null,
+    primary key (address, city, state, zipcode),
+    username varchar(256) not null,
+    FOREIGN KEY (username)
+        REFERENCES users (username)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
 
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- For adding a new user to the database.
 -- Returns reponse message, 0 for success or 1 otherwise
 drop procedure if exists addUser;   
 delimiter $$
-CREATE procedure addUser(in _username VARCHAR(255), in _pass VARCHAR(255)) 
+CREATE procedure addUser(in _username varchar(256), in _pass varchar(256)) 
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
     declare continue handler for 1062 set duplicate_entry_for_key = true;
@@ -56,8 +60,9 @@ delimiter ;
 
 -- TESTS
 select * from users;
-delete from users where username = "dantaki1";
-call addUser('dantaki', '1234');
+delete from users where username = "testuser";
+call addUser('testuser', '1234');
+delete from users where username = "testuser";
 --  -------------------------------------------------------------------------------------------------------------------------------
 
 -- Checks whether the given username and password are correct.
@@ -65,28 +70,127 @@ call addUser('dantaki', '1234');
 -- Returns 1 if either username or password are incorrect
 drop function if exists checkUserPass;
 delimiter $$
-create function checkUserPass(sp1 varchar(255), sp2 varchar(255))
+create function checkUserPass(_username varchar(256), _pass varchar(256))
 	returns int deterministic contains sql
     begin
-		declare sp1Size int;
-        declare sp2Size int;
-        select size into sp1Size from lotr_species where species_name = sp1;
-        select size into sp2Size from lotr_species where species_name = sp2;
-        if sp1Size = sp2Size then
+		declare stored_password_hash binary(32);
+        declare inputted_password_hash binary(32);
+		set inputted_password_hash = md5(_pass);
+		
+        select passwordHash into stored_password_hash from users where username = _username;
+        
+        if stored_password_hash = inputted_password_hash then
 			return 0;
-		elseif sp1Size > sp2Size then
-			return 1;
 		else
 			return -1;
 		end if;
     end $$
 delimiter ;
 
-select * from lotr_species;
-
 -- TESTS
-select checkUserPass('balrog', 'dwarf');	-- should return 1
-select checkUserPass('human', 'orc');	-- should return 0
-select checkUserPass('dwarf', 'elf');	-- should return -1
+select * from users;
+delete from users where username = "testuser";
+call addUser('testuser', '1234');
+select checkUserPass("testuser", "1234");	-- should return 0
+select checkUserPass("testuser", "12345");	-- should return -1
+delete from users where username = "testuser";
 
 --  -------------------------------------------------------------------------------------------------------------------------------
+-- For adding a new property to the database
+-- Returns response message, 0 for success or 1 otherwise
+drop procedure if exists addProperty;
+delimiter $$
+CREATE procedure addProperty(in _username varchar(256), in _address varchar(256), in _city varchar(256), in _state varchar(2), in _zipcode varchar(32))
+BEGIN
+	declare duplicate_entry_for_key tinyint default false;
+    declare user_does_not_exist tinyint default false;
+    declare continue handler for 1062 set duplicate_entry_for_key = true;
+    declare continue handler for 1452 set user_does_not_exist = true;
+    
+    
+	INSERT INTO properties (address, city, state, zipcode, username) VALUES(_address, _city, _state, _zipcode, _username);
+    
+    if user_does_not_exist = true then
+		select 'The current user does not exist in the database.' as response_msg,
+			1 as response_code;
+    elseif duplicate_entry_for_key = true then
+		select 'That property already exists.' as response_msg,
+			1 as response_code;
+	else
+		select 'Property added to your portfolio.' as response_msg,
+			0 as response_code;	-- on success
+	end if;
+END
+$$
+delimiter ;
+
+-- TESTS
+select * from users;
+select * from properties;
+delete from properties where username = "dantaki";
+delete from users where username = "dantaki";
+call addProperty('dantaki', '1','2','MA','3'); -- should fail
+call addUser('dantaki', '1234');	-- should work
+call addProperty('dantaki', '1','2','MA','3'); -- should work
+call addProperty('dantaki', '1','2','MA','3'); -- should fail
+call addProperty('bob', '1','2','MA','3'); -- should fail
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- For removing a property from the database
+-- Returns response message, 0 for success or 1 otherwise
+drop procedure if exists removeProperty;
+delimiter $$
+CREATE procedure removeProperty(in _username varchar(256), in _address varchar(256), in _city varchar(256), in _state varchar(2), in _zipcode varchar(32))
+BEGIN
+    declare user_does_not_exist tinyint default false;
+    declare continue handler for 1452 set user_does_not_exist = true;
+    
+    delete from properties where username=_username and _address=address and _city=city and _state=state and _zipcode=zipcode;
+    
+    if user_does_not_exist = true then
+		select 'The current user does not exist in the database.' as response_msg,
+			1 as response_code;
+	else
+		select 'Property removed from your portfolio.' as response_msg,
+			0 as response_code;	-- on success
+	end if;
+END
+$$
+delimiter ;
+
+-- TESTS
+select * from users;
+select * from properties;
+delete from properties where username = "dantaki";
+delete from users where username = "dantaki";
+call addUser('dantaki', '1234');	-- should work
+call addProperty('dantaki', '1','2','MA','3'); -- should work
+call addProperty('dantaki', '1','2','MA','4'); -- should work
+call removeProperty('dantaki', '1','2','MA','3'); -- should work
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- Returns all properties for a given user
+drop procedure if exists getAllProperties;
+delimiter $$
+CREATE procedure getAllProperties(in _username varchar(256))
+BEGIN
+	select address, city, state, zipcode from properties where username = _username;
+END
+$$
+delimiter ;
+
+-- TESTS
+select * from users;
+select * from properties;
+delete from properties where username = "dantaki";
+delete from users where username = "dantaki";
+call addUser('dantaki', '1234');	-- should work
+call addUser('bob', '1234');	-- should work
+call addProperty('dantaki', '1','2','MA','3'); -- should work
+call addProperty('dantaki', '1','2','MA','4'); -- should work
+call addProperty('bob', '1','2','MA','5'); -- should work
+call getAllProperties('bob');
+call getAllProperties('dantaki');
+call getAllProperties('tim'); -- should just return empty
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- Bulk test tuples
+call addUser('dantaki', '1234');
+call addProperty('dantaki', '1','2','MA','3');
