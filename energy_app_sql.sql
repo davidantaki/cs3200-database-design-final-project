@@ -10,8 +10,11 @@ select * from mysql.user;
 CREATE USER if not exists 'energy_app_user'@'%' IDENTIFIED BY '1234';
 grant select on energy_app.* to 'energy_app_user'@'%';
 grant insert on energy_app.* to 'energy_app_user'@'%';
+grant update on energy_app.* to 'energy_app_user'@'%';
+grant execute on energy_app.* to 'energy_app_user'@'%';
 
 show grants for energy_app_user;
+select * from mysql.user;
 --  -------------------------------------------------------------------------------------------------------------------------------
 drop table if exists users;
 create table if not exists users(
@@ -21,8 +24,7 @@ create table if not exists users(
 );
 
 select * from users;
-replace into users (username, passwordHash)
-VALUES("test", md5("1234"));
+-- replace into users (username, passwordHash) VALUES("test", md5("1234"));
 
 -- create table if not exists utilityBills(
 -- 	
@@ -32,27 +34,30 @@ VALUES("test", md5("1234"));
 
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- For adding a new user to the database.
+-- Returns reponse message, 0 for success or 1 otherwise
 drop procedure if exists addUser;   
 delimiter $$
-CREATE procedure addUser(
-	in _username VARCHAR(256), 
-    in _pass VARCHAR(256)) 
+CREATE procedure addUser(in _username VARCHAR(255), in _pass VARCHAR(255)) 
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
-	declare continue handler for 1062 set duplicate_entry_for_key = true;
-	INSERT INTO users (username, passwordHash) VALUES(_username, "1234");
+    declare continue handler for 1062 set duplicate_entry_for_key = true;
+	INSERT INTO users (username, passwordHash) VALUES(_username, md5(_pass));
     
     if duplicate_entry_for_key = true then
-		select 'Row was not inserted - duplicate key encountered.' as message;
+		select 'That user already exists.' as response_msg,
+			1 as response_code;
 	else
-		select '1 row was inserted.' as message;
+		select 'User added.' as response_msg,
+			0 as response_code;	-- on success
 	end if;
 END
 $$
 delimiter ;
 
 -- TESTS
-call addUser('testuser1', '1234');
+select * from users;
+delete from users where username = "dantaki1";
+call addUser('dantaki', '1234');
 --  -------------------------------------------------------------------------------------------------------------------------------
 
 -- Checks whether the given username and password are correct.
