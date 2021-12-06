@@ -194,3 +194,85 @@ call getAllProperties('tim'); -- should just return empty
 -- Bulk test tuples
 call addUser('dantaki', '1234');
 call addProperty('dantaki', '1','2','MA','3');
+
+--  -------------------------------------------------------------------------------------------------------------------------------
+
+create table if not exists utilityProvider (
+    name varchar(32) not null PRIMARY KEY
+);
+
+create table if not exists utilityBill (
+    month varchar(16) not null,
+    year int not null,
+    address varchar(256) not null,
+    city varchar(256) not null,
+    state varchar(2) not null,
+    zipcode varchar(32) not null,
+    energyConsumptionKWh int not null, 
+    energyCost decimal(5,2) not null,
+    primary key (month, year, address, city, state, zipcode),
+    FOREIGN KEY (address, city, state, zipcode)
+        REFERENCES properties (address, city, state, zipcode)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+-- For adding a new utility bill to the database
+-- Returns response message, 0 for success or 1 otherwise
+drop procedure if exists addBill;
+delimiter $$
+CREATE procedure addBill(in _month varchar(16), in _year int, in _address varchar(256), in _city varchar(256), in _state varchar(2), in _zipcode varchar(32), in _energyConsumptionKWh int, in _energyCost decimal(5,2))
+BEGIN
+	declare duplicate_entry_for_key tinyint default false;
+    declare user_does_not_exist tinyint default false;
+    declare continue handler for 1062 set duplicate_entry_for_key = true;
+    declare continue handler for 1452 set user_does_not_exist = true;
+    
+    
+	INSERT INTO utilityBill (month, year, address, city, state, zipcode, energyConsumptionKWh, energyCost) VALUES(_month, _year, _address, _city, _state, _zipcode, _energyConsumptionKWh, _energyCost);
+    
+    if user_does_not_exist = true then
+		select 'The current user does not exist in the database.' as response_msg,
+			1 as response_code;
+    elseif duplicate_entry_for_key = true then
+		select 'That bill already exists.' as response_msg,
+			1 as response_code;
+	else
+		select 'Bill added to your portfolio.' as response_msg,
+			0 as response_code;	-- on success
+	end if;
+END
+$$
+delimiter ;
+
+-- For removing a property from the database
+-- Returns response message, 0 for success or 1 otherwise
+drop procedure if exists removeBill;
+delimiter $$
+CREATE procedure removeBill(in _month varchar(16), in _year int, in _address varchar(256), in _city varchar(256), in _state varchar(2), in _zipcode varchar(32), in _energyConsumptionKWh int, in _energyCost decimal(5,2))
+BEGIN
+    declare user_does_not_exist tinyint default false;
+    declare continue handler for 1452 set user_does_not_exist = true;
+    
+    delete from utilityBill where month=_month and year=_year and address=_address and city=_city and state=_state and zipcode=_zipcode ;
+    
+    if user_does_not_exist = true then
+		select 'The current user does not exist in the database.' as response_msg,
+			1 as response_code;
+	else
+		select 'Bill removed from your portfolio.' as response_msg,
+			0 as response_code;	-- on success
+	end if;
+END
+$$
+delimiter ;
+
+-- Returns all bills for a given property
+drop procedure if exists getAllBills;
+delimiter $$
+CREATE procedure getAllBills(in _address varchar(256), in _city varchar(256), in _state varchar(2), zipcode varchar(32))
+BEGIN
+	select month, year, energyConsumptionKWh, energyCost from utilityBill where address = _address & city = _city & state = _state & zipcode = _zipcode;
+END
+$$
+delimiter ;
+
