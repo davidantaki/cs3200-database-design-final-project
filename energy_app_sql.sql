@@ -276,3 +276,58 @@ END
 $$
 delimiter ;
 
+-- For adding a new utility provider to the database
+-- Returns response message, 0 for success or 1 otherwise
+drop procedure if exists addProvider;
+delimiter $$
+CREATE procedure addProvider(_name varchar (32))
+BEGIN
+	declare duplicate_entry_for_key tinyint default false;
+    declare user_does_not_exist tinyint default false;
+    declare continue handler for 1062 set duplicate_entry_for_key = true;
+    declare continue handler for 1452 set user_does_not_exist = true;
+    
+    
+	INSERT INTO utilityProvider (name) VALUES(_name);
+    
+    if user_does_not_exist = true then
+		select 'The current user does not exist in the database.' as response_msg,
+			1 as response_code;
+    elseif duplicate_entry_for_key = true then
+		select 'That provider already exists.' as response_msg,
+			1 as response_code;
+	else
+		select 'Utility Provider added to your portfolio.' as response_msg,
+			0 as response_code;	-- on success
+	end if;
+END
+$$
+delimiter ;
+
+
+-- Returns all utility providers available
+drop procedure if exists getAllProviders;
+delimiter $$
+CREATE procedure getAllProviders()
+BEGIN
+	select name from utilityProvider;
+END
+$$
+delimiter ;
+
+-- -- Returns all utility providers for a specific property
+drop procedure if exists getPropertyProviders;
+delimiter $$
+CREATE procedure getPropertyProviders(in _address varchar(256), in _city varchar(256), in _state varchar(2), _zipcode varchar(32))
+BEGIN
+	select distinct name from utilityBill where address=_address and city=_city and state=_state and zipcode=_zipcode;
+END
+$$
+delimiter ;
+
+-- Test
+call addProvider('National Electric');
+call addBill ('5', '2020', '1','2','MA','3', '456', '768', 'National Electric');
+call getPropertyProviders('1','2','MA','3');
+call getAllProviders();
+
