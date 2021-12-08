@@ -37,7 +37,7 @@ create table if not exists properties (
     username varchar(256) not null,
     FOREIGN KEY (username)
         REFERENCES users (username)
-        ON UPDATE RESTRICT ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 drop table if exists utilityProvider;
@@ -59,10 +59,10 @@ create table if not exists utilityBill (
     primary key (month, year, address, city, state, zipcode, providerName),
     FOREIGN KEY (address, city, state, zipcode)
         REFERENCES properties (address, city, state, zipcode)
-        ON UPDATE RESTRICT ON DELETE RESTRICT,
+        ON UPDATE CASCADE ON DELETE CASCADE,
 	FOREIGN KEY (providerName)
         REFERENCES utilityProvider (providerName)
-        ON UPDATE RESTRICT ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 --  -------------------------------------------------------------------------------------------------------------------------------
