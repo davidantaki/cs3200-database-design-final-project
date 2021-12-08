@@ -1,3 +1,7 @@
+-- David Antaki
+-- Sid Saraf
+-- Database Design (CS3200) Final Project
+
 --  -------------------------------------------------------------------------------------------------------------------------------
 create database if not exists energy_app;
 use energy_app;
@@ -37,15 +41,18 @@ create table if not exists properties (
     username varchar(256) not null,
     FOREIGN KEY (username)
         REFERENCES users (username)
-        ON UPDATE CASCADE ON DELETE CASCADE
+        ON UPDATE CASCADE ON DELETE CASCADE,
+	FOREIGN KEY (state)
+        REFERENCES state (twoLetterName)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
 );
 
-drop table if exists utilityProvider;
+
 create table if not exists utilityProvider (
     providerName varchar(256) not null PRIMARY KEY
 );
 
-drop table if exists utilityBill;
+
 create table if not exists utilityBill (
     month int not null,
     year int not null,
@@ -62,6 +69,98 @@ create table if not exists utilityBill (
         ON UPDATE CASCADE ON DELETE CASCADE,
 	FOREIGN KEY (providerName)
         REFERENCES utilityProvider (providerName)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+
+create table if not exists state (
+    twoLetterName varchar(2) not null primary key,
+    fullName varchar(256) not null
+);
+
+-- Add tuples to state that should not be changed.
+insert ignore into state (fullName, twoLetterName)
+values
+	("ALABAMA","AL"),
+	("ALASKA","AK"),
+	("AMERICAN SAMOA","AS"),
+	("ARIZONA","AZ"),
+	("ARKANSAS","AR"),
+	("CALIFORNIA","CA"),
+	("COLORADO","CO"),
+	("CONNECTICUT","CT"),
+	("DELAWARE","DE"),
+	("DISTRICT OF COLUMBIA","DC"),
+	("FLORIDA","FL"),
+	("GEORGIA","GA"),
+	("GUAM","GU"),
+	("HAWAII","HI"),
+	("IDAHO","ID"),
+	("ILLINOIS","IL"),
+	("INDIANA","IN"),
+	("IOWA","IA"),
+	("KANSAS","KS"),
+	("KENTUCKY","KY"),
+	("LOUISIANA","LA"),
+	("MAINE","ME"),
+	("MARYLAND","MD"),
+	("MASSACHUSETTS","MA"),
+	("MICHIGAN","MI"),
+	("MINNESOTA","MN"),
+	("MISSISSIPPI","MS"),
+	("MISSOURI","MO"),
+	("MONTANA","MT"),
+	("NEBRASKA","NE"),
+	("NEVADA","NV"),
+	("NEW HAMPSHIRE","NH"),
+	("NEW JERSEY","NJ"),
+	("NEW MEXICO","NM"),
+	("NEW YORK","NY"),
+	("NORTH CAROLINA","NC"),
+	("NORTH DAKOTA","ND"),
+	("NORTHERN MARIANA IS","MP"),
+	("OHIO","OH"),
+	("OKLAHOMA","OK"),
+	("OREGON","OR"),
+	("PENNSYLVANIA","PA"),
+	("PUERTO RICO","PR"),
+	("RHODE ISLAND","RI"),
+	("SOUTH CAROLINA","SC"),
+	("SOUTH DAKOTA","SD"),
+	("TENNESSEE","TN"),
+	("TEXAS","TX"),
+	("UTAH","UT"),
+	("VERMONT","VT"),
+	("VIRGINIA","VA"),
+	("VIRGIN ISLANDS","VI"),
+	("WASHINGTON","WA"),
+	("WEST VIRGINIA","WV"),
+	("WISCONSIN","WI"),
+	("WYOMING","WY");
+
+
+create table if not exists stateAvgEnergyData (
+	twoLetterState varchar(2) not null primary key,
+    numCustomers int not null,
+    avgMonthlyConsumptionKWh DECIMAL(13,2) not null,
+    avgPriceCentsPerKWh DECIMAL(13, 2) not null,
+    avgMonthlyBillDollars DECIMAL(13, 2) not null,
+    FOREIGN KEY (twoLetterState)
+        REFERENCES state (twoLetterName)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+create table if not exists appliance (
+	applianceName varchar(256) not null,
+    avgDailyUsageHr int not null,
+    energyRatingKW int not null,
+	address varchar(256) not null,
+    city varchar(128) not null,
+    state varchar(2) not null,
+    zipcode varchar(16) not null,
+    primary key (applianceName, address, city, state, zipcode),
+    FOREIGN KEY (address, city, state, zipcode)
+        REFERENCES properties (address, city, state, zipcode)
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
