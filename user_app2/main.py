@@ -124,7 +124,6 @@ def main_menu(cnx, currentUser):
         6: "Remove Utility Bill",
         7: "View Utility Providers",
         8: "Add Utility Provider",
-        9: "Delete Account",
         10: "Logout"
     }
 
@@ -201,12 +200,27 @@ def remove_property(cnx, currentUser):
         if selection not in range(len(your_properties)):
             print("Invalid selection.")
         else:
+            property = your_properties[selection]
+            # Confirm removal
+            print("Removing this property: " + property["address"] + ", " +
+                  property["city"] + ", " + property["state"] + " " + property["zipcode"])
+
+            # Confirm delete
+            while True:
+                confirm = input(
+                    "Removing this property will also remove all bills associated with the property. Continue? (y/n)")
+                if str.lower(confirm) == 'n':
+                    print("Cancelling")
+                    return
+                elif str.lower(confirm) == 'y':
+                    break
+                else:
+                    print("Invalid input.")
+
             cur = cnx.cursor()
             cur.execute("call removeProperty(%s, %s, %s, %s, %s)",
-                        (
-                            currentUser, your_properties[selection]["address"],
-                            your_properties[selection]["city"],
-                            your_properties[selection]["state"], your_properties[selection]["zipcode"]))
+                        (currentUser, property["address"],
+                         property["city"], property["state"], property["zipcode"]))
             cnx.commit()
             result = cur.fetchone()
             print(result["response_msg"])
