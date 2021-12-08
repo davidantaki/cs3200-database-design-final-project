@@ -452,6 +452,100 @@ call getPropertyProviders('1','2','MA','3');
 call getAllProviders();
 
 --  -------------------------------------------------------------------------------------------------------------------------------
+
+-- For adding a new applaince located at a proeprty
+-- Returns response message, 0 for success or 1 otherwise
+drop procedure if exists addAppliance;
+delimiter $$
+CREATE procedure addAppliance(in _applianceName varchar(256), in _avgDailyUsageHr int, in _energyRatingKW int,
+	in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
+BEGIN
+	declare duplicate_entry_for_key tinyint default false;
+    declare property_does_not_exist tinyint default false;
+    declare continue handler for 1062 set duplicate_entry_for_key = true;
+    declare continue handler for 1452 set property_does_not_exist = true;
+    
+	INSERT INTO appliance (applianceName, avgDailyUsageHr, energyRatingKW, address, city, state, zipcode)
+    VALUES(_applianceName, _avgDailyUsageHr, _energyRatingKW, _address, _city, _state, _zipcode);
+    
+    if duplicate_entry_for_key = true then
+		select 'That appliance already exists.' as response_msg,
+			1 as response_code;
+	elseif property_does_not_exist = true then
+		select 'That property does not exist.' as response_msg,
+			1 as response_code;
+	else
+		select 'Appliance added to your property.' as response_msg,
+			0 as response_code;	-- on success
+	end if;
+END
+$$
+delimiter ;
+
+-- TESTS
+select * from appliance;
+select * from properties;
+call addAppliance('fridge', 24, 0.400, 1, 2, 'MA', 3);
+call addAppliance('stove', 1, 3, 1, 2, 'MA', 3);
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- Updates the given appliance with the given information. If info is to be the same, this is handled in the frontend.
+drop procedure if exists updateAppliance;
+delimiter $$
+CREATE procedure updateAppliance(in _oldApplianceName varchar(256), in _newApplianceName varchar(256), in _avgDailyUsageHr int, in _energyRatingKW int,
+	in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
+BEGIN
+	update appliance set applianceName = _newApplianceName, avgDailyUsageHr=_avgDailyUsageHr,energyRatingKW=_energyRatingKW
+    where applianceName = _oldApplianceName and address = _address and city = _city and state = _state and zipcode = _zipcode;
+END
+$$
+delimiter ;
+
+-- TESTS
+select * from appliance;
+call updateAppliance('fridge','frdge',24,400,'1','2','MA','3');
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- For removing an appliance from the database
+-- Returns response message, 0 for success or 1 otherwise
+drop procedure if exists removeAppliance;
+delimiter $$
+CREATE procedure removeAppliance(in _applianceName varchar(256),
+	in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
+BEGIN 
+    if exists (select 1 from appliance where applianceName=_applianceName and address=_address
+		and city=_city and state=_state and zipcode=_zipcode) then
+		delete from appliance where applianceName=_applianceName and address=_address
+		and city=_city and state=_state and zipcode=_zipcode;
+		select 'Appliance removed from your property.' as response_msg,
+			0 as response_code;	-- on success
+	else
+		select 'That appliance does not exist.' as response_msg,
+			1 as response_code;
+	end if;
+END
+$$
+delimiter ;
+
+-- TESTS
+select * from appliance;
+call addAppliance('test', 200.0, 100.0, '1', '2', 'MA', '3');
+call removeAppliance('test', '1', '2', 'MA', '3');
+
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- Returns all appliances for a given property
+drop procedure if exists getAllAppliances;
+delimiter $$
+CREATE procedure getAllAppliances(in _address varchar(256), in _city varchar(128), in _state varchar(2), _zipcode varchar(16))
+BEGIN
+	select applianceName, avgDailyUsageHr, energyRatingKW from appliance where address = _address and city = _city and state = _state and zipcode = _zipcode;
+END
+$$
+delimiter ;
+
+-- TESTS
+select * from appliance;
+call getAllAppliances('1','2','MA','3');
+
+--  -------------------------------------------------------------------------------------------------------------------------------
 -- Bulk test tuples
 select * from properties;
 select * from users;
