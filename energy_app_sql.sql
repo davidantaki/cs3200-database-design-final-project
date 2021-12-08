@@ -16,6 +16,10 @@ grant execute on energy_app.* to 'energy_app_user'@'%';
 show grants for energy_app_user;
 select * from mysql.user;
 --  -------------------------------------------------------------------------------------------------------------------------------
+-- TABLES
+
+drop table if exists utilitybill;
+drop table if exists utilityprovider;
 drop table if exists properties;
 drop table if exists users;
 
@@ -26,13 +30,38 @@ create table if not exists users(
 
 create table if not exists properties (
     address varchar(256) not null,
-    city varchar(256) not null,
+    city varchar(128) not null,
     state varchar(2) not null,
-    zipcode varchar(32) not null,
+    zipcode varchar(16) not null,
     primary key (address, city, state, zipcode),
     username varchar(256) not null,
     FOREIGN KEY (username)
         REFERENCES users (username)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+drop table if exists utilityProvider;
+create table if not exists utilityProvider (
+    providerName varchar(256) not null PRIMARY KEY
+);
+
+drop table if exists utilityBill;
+create table if not exists utilityBill (
+    month int not null,
+    year int not null,
+    address varchar(256) not null,
+    city varchar(128) not null,
+    state varchar(2) not null,
+    zipcode varchar(16) not null,
+    energyConsumptionKWh int not null, 
+    energyCost decimal(5,2) not null,
+    providerName varchar(256) not null,
+    primary key (month, year, address, city, state, zipcode, providerName),
+    FOREIGN KEY (address, city, state, zipcode)
+        REFERENCES properties (address, city, state, zipcode)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+	FOREIGN KEY (providerName)
+        REFERENCES utilityProvider (providerName)
         ON UPDATE RESTRICT ON DELETE RESTRICT
 );
 
@@ -100,7 +129,7 @@ delete from users where username = "testuser";
 -- Returns response message, 0 for success or 1 otherwise
 drop procedure if exists addProperty;
 delimiter $$
-CREATE procedure addProperty(in _username varchar(256), in _address varchar(256), in _city varchar(256), in _state varchar(2), in _zipcode varchar(32))
+CREATE procedure addProperty(in _username varchar(256), in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
     declare user_does_not_exist tinyint default false;
@@ -139,7 +168,7 @@ call addProperty('bob', '1','2','MA','3'); -- should fail
 -- Returns response message, 0 for success or 1 otherwise
 drop procedure if exists removeProperty;
 delimiter $$
-CREATE procedure removeProperty(in _username varchar(256), in _address varchar(256), in _city varchar(256), in _state varchar(2), in _zipcode varchar(32))
+CREATE procedure removeProperty(in _username varchar(256), in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN
     declare user_does_not_exist tinyint default false;
     declare continue handler for 1452 set user_does_not_exist = true;
@@ -191,36 +220,13 @@ call getAllProperties('bob');
 call getAllProperties('dantaki');
 call getAllProperties('tim'); -- should just return empty
 --  -------------------------------------------------------------------------------------------------------------------------------
--- Bulk test tuples
-call addUser('dantaki', '1234');
-call addProperty('dantaki', '1','2','MA','3');
-
---  -------------------------------------------------------------------------------------------------------------------------------
-
-create table if not exists utilityProvider (
-    name varchar(32) not null PRIMARY KEY
-);
-
-create table if not exists utilityBill (
-    month varchar(16) not null,
-    year int not null,
-    address varchar(256) not null,
-    city varchar(256) not null,
-    state varchar(2) not null,
-    zipcode varchar(32) not null,
-    energyConsumptionKWh int not null, 
-    energyCost decimal(5,2) not null,
-    primary key (month, year, address, city, state, zipcode),
-    FOREIGN KEY (address, city, state, zipcode)
-        REFERENCES properties (address, city, state, zipcode)
-        ON UPDATE RESTRICT ON DELETE RESTRICT
-);
 
 -- For adding a new utility bill to the database
 -- Returns response message, 0 for success or 1 otherwise
 drop procedure if exists addBill;
 delimiter $$
-CREATE procedure addBill(in _month varchar(16), in _year int, in _address varchar(256), in _city varchar(256), in _state varchar(2), in _zipcode varchar(32), in _energyConsumptionKWh int, in _energyCost decimal(5,2))
+CREATE procedure addBill(in _month int, in _year int, in _address varchar(256), in _city varchar(128), in _state varchar(2),
+	in _zipcode varchar(16), in _energyConsumptionKWh int, in _energyCost decimal(5,2), in _providerName varchar(256))
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
     declare user_does_not_exist tinyint default false;
@@ -228,12 +234,13 @@ BEGIN
     declare continue handler for 1452 set user_does_not_exist = true;
     
     
-	INSERT INTO utilityBill (month, year, address, city, state, zipcode, energyConsumptionKWh, energyCost) VALUES(_month, _year, _address, _city, _state, _zipcode, _energyConsumptionKWh, _energyCost);
+	INSERT INTO utilityBill (month, year, address, city, state, zipcode, energyConsumptionKWh, energyCost, providerName)
+    VALUES(_month, _year, _address, _city, _state, _zipcode, _energyConsumptionKWh, _energyCost, _providerName);
     
-    if user_does_not_exist = true then
-		select 'The current user does not exist in the database.' as response_msg,
-			1 as response_code;
-    elseif duplicate_entry_for_key = true then
+    -- if user_does_not_exist = true then
+-- 		select 'The current user does not exist in the database.' as response_msg,
+-- 			1 as response_code;
+    if duplicate_entry_for_key = true then
 		select 'That bill already exists.' as response_msg,
 			1 as response_code;
 	else
@@ -243,84 +250,98 @@ BEGIN
 END
 $$
 delimiter ;
-
+--  -------------------------------------------------------------------------------------------------------------------------------
 -- For removing a property from the database
 -- Returns response message, 0 for success or 1 otherwise
 drop procedure if exists removeBill;
 delimiter $$
-CREATE procedure removeBill(in _month varchar(16), in _year int, in _address varchar(256), in _city varchar(256), in _state varchar(2), in _zipcode varchar(32), in _energyConsumptionKWh int, in _energyCost decimal(5,2))
+CREATE procedure removeBill(in _month int, in _year int, in _address varchar(256), in _city varchar(128),
+in _state varchar(2), in _zipcode varchar(16), in _providerName varchar(256))
 BEGIN
     declare user_does_not_exist tinyint default false;
     declare continue handler for 1452 set user_does_not_exist = true;
     
-    delete from utilityBill where month=_month and year=_year and address=_address and city=_city and state=_state and zipcode=_zipcode ;
-    
-    if user_does_not_exist = true then
-		select 'The current user does not exist in the database.' as response_msg,
-			1 as response_code;
-	else
+    if exists (select 1 from utilitybill where month=_month and year=_year and address=_address
+		and city=_city and state=_state and zipcode=_zipcode and providerName = _providerName) then
+		delete from utilitybill where month=_month and year=_year and address=_address
+			and city=_city and state=_state and zipcode=_zipcode and providerName = _providerName;
 		select 'Bill removed from your portfolio.' as response_msg,
 			0 as response_code;	-- on success
+	else
+		select 'That bill does not exist.' as response_msg,
+			1 as response_code;
 	end if;
 END
 $$
 delimiter ;
 
+-- TESTS
+select * from utilitybill;
+call addBill('1', '2021', '1', '2', 'MA', '3', 50,50,'Eversource');
+call removeBill('1', '2021', '1', '2', 'MA', '3', 'Eversource');
+call removeBill('70', '2021', '1', '2', 'MA', '3', 'Eversource');
+delete from utilitybill where month='1' and year='2021' and address='1'
+		and city='2' and state='MA' and zipcode='3' and providerName = 'Eversource';
+
+--  -------------------------------------------------------------------------------------------------------------------------------
 -- Returns all bills for a given property
 drop procedure if exists getAllBills;
 delimiter $$
-CREATE procedure getAllBills(in _address varchar(256), in _city varchar(256), in _state varchar(2), zipcode varchar(32))
+CREATE procedure getAllBills(in _address varchar(256), in _city varchar(128), in _state varchar(2), _zipcode varchar(16))
 BEGIN
-	select month, year, energyConsumptionKWh, energyCost from utilityBill where address = _address & city = _city & state = _state & zipcode = _zipcode;
+	select month, year, energyConsumptionKWh, energyCost, providerName from utilityBill where address = _address and city = _city and state = _state and zipcode = _zipcode;
 END
 $$
 delimiter ;
 
+-- TESTS
+select * from utilitybill;
+call getAllBills('1','2','MA','3');
+
+--  -------------------------------------------------------------------------------------------------------------------------------
 -- For adding a new utility provider to the database
 -- Returns response message, 0 for success or 1 otherwise
 drop procedure if exists addProvider;
 delimiter $$
-CREATE procedure addProvider(_name varchar (32))
+CREATE procedure addProvider(_name varchar (256))
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
     declare user_does_not_exist tinyint default false;
     declare continue handler for 1062 set duplicate_entry_for_key = true;
-    declare continue handler for 1452 set user_does_not_exist = true;
-    
-    
-	INSERT INTO utilityProvider (name) VALUES(_name);
-    
-    if user_does_not_exist = true then
-		select 'The current user does not exist in the database.' as response_msg,
-			1 as response_code;
-    elseif duplicate_entry_for_key = true then
+        
+	INSERT INTO utilityProvider (providerName) VALUES(_name);
+
+    if duplicate_entry_for_key = true then
 		select 'That provider already exists.' as response_msg,
 			1 as response_code;
 	else
-		select 'Utility Provider added to your portfolio.' as response_msg,
+		select 'Utility Provider added.' as response_msg,
 			0 as response_code;	-- on success
 	end if;
 END
 $$
 delimiter ;
 
-
+--  -------------------------------------------------------------------------------------------------------------------------------
 -- Returns all utility providers available
 drop procedure if exists getAllProviders;
 delimiter $$
 CREATE procedure getAllProviders()
 BEGIN
-	select name from utilityProvider;
+	select providerName from utilityProvider;
 END
 $$
 delimiter ;
 
+-- TESTS
+call getAllProviders();
+--  -------------------------------------------------------------------------------------------------------------------------------
 -- -- Returns all utility providers for a specific property
 drop procedure if exists getPropertyProviders;
 delimiter $$
-CREATE procedure getPropertyProviders(in _address varchar(256), in _city varchar(256), in _state varchar(2), _zipcode varchar(32))
+CREATE procedure getPropertyProviders(in _address varchar(256), in _city varchar(128), in _state varchar(2), _zipcode varchar(16))
 BEGIN
-	select distinct name from utilityBill where address=_address and city=_city and state=_state and zipcode=_zipcode;
+	select distinct providerName from utilityBill where address=_address and city=_city and state=_state and zipcode=_zipcode;
 END
 $$
 delimiter ;
@@ -331,3 +352,19 @@ call addBill ('5', '2020', '1','2','MA','3', '456', '768', 'National Electric');
 call getPropertyProviders('1','2','MA','3');
 call getAllProviders();
 
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- Bulk test tuples
+select * from properties;
+select * from users;
+select * from utilitybill;
+select * from utilityprovider;
+call addUser('dantaki', '1234');
+call addProperty('dantaki', '1','2','MA','3');
+call addProperty('dantaki', '1','2','MA','4');
+call addProperty('dantaki', '1','2','MA','5');
+call addProvider('National Electric');
+call addProvider('Eversource');
+call addProvider('Solar');
+call addBill(1, 2021,'1','2','MA','3', 500,50,'Eversource');
+call addBill(2, 2021,'1','2','MA','3', 500,51,'Eversource');
+call addBill(2, 2021,'1','2','MA','3', 500,51,'Solar');
