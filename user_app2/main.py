@@ -31,24 +31,32 @@ def openDatabaseUserConnection():
 
 # Displays login menu for logging into an existing user account or creating a new one.
 def loginRegister(cnx):
-    username = ""
-    password = ""
-    # Login Menu
-    validMenuOptions = ['1', '2']
-    while True:
-        #  Login menu
-        print("Login Menu:")
-        print(validMenuOptions[0] + ". Login")
-        print(validMenuOptions[1] + ". Register")
-        menuSelection = input("Menu Selection: ")
-        # Check menu input
-        if menuSelection not in validMenuOptions:
-            print("Invalid menu selection")
-        else:
-            break
+    menu_options = {
+        1: "Login",
+        2: "Register",
+        3: "Exit"
+    }
 
-    # Login
-    if menuSelection == validMenuOptions[0]:
+    while (True):
+        print("Login Menu:")
+        print_menu(menu_options)
+        menu_selection = ''
+        try:
+            menu_selection = int(input('Menu Selection: '))
+        except:
+            print('Invalid selection. Please enter a number ...')
+        # Check what choice was entered and act accordingly
+        if menu_selection == 1:
+            login(cnx)
+        elif menu_selection == 2:
+            register(cnx)
+        elif menu_selection == 3:
+            return
+        else:
+            print('Invalid selection.')
+
+
+def login(cnx):
         # Get username and password
         username = input("Enter Username: ")
         password = input("Enter Password: ")
@@ -58,24 +66,27 @@ def loginRegister(cnx):
         result = list(cur.fetchone().values())[0]
         if result == -1:
             print("Invalid username or password.")
-            loginRegister(cnx)
         else:
             print("Logged in.")
-            return {"username": username, "password": password}
+        main_menu(cnx, username)
 
-    # Register
-    elif menuSelection == validMenuOptions[1]:
-        while (True):
+
+def register(cnx):
+    while True:
             username = input("Enter New Username: ")
-            if username == "" or username == None:
+        if username == "" or username is None:
                 print("Username cannot be blank")
             else:
                 break
 
-        while (True):
+    while True:
             password = input("Enter New Password: ")
-            if password == "" or password == None:
+        if password == "" or password is None:
                 print("Password cannot be blank")
+            else:
+            password2 = input("Re-Enter New Password: ")
+            if password != password2:
+                print("Passwords did not match.")
             else:
                 break
 
@@ -85,11 +96,10 @@ def loginRegister(cnx):
         result = cur.fetchone()
         print(result["response_msg"])
 
-        # If not valid registration, go back to login menu
-        if result["response_code"] == 1:
-            loginRegister(cnx)
-        else:
-            return {"username": username, "password": password}
+    # If valid registration
+    if not result["response_code"] == 1:
+        print("Logged In.")
+        main_menu(cnx, username)
 
 
 def print_menu(menu_options):
