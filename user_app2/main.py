@@ -193,8 +193,11 @@ def add_property(cnx, currentUser):
     zipcode = input("Enter the zipcode: ")
 
     cur = cnx.cursor()
+    try:
     cur.execute("call addProperty(%s, %s, %s, %s, %s)",
                 (currentUser, address, city, state, zipcode))
+    except pymysql.err.DataError:
+        print("Invalid property address.")
     cnx.commit()
     result = cur.fetchone()
     print(result["response_msg"])
