@@ -34,13 +34,12 @@ better segmented out. i.e. SQL schema should be in one file, procedures in anoth
 ## Document any code not working in this section
 * All code works as intended that we know of. We did not write tests for our
 code which we have noted as a future improvement to the robustness of this
-application.
+application. However, we did manually validate that all operations work as intended.
 
 # Future Work
 ## Planned uses of the database
-* For a home user to track their homes energy usage.
-* For a commercial property manager to track their properties' energy usages
-and costs to give insights into how they could optmize their properties' energy.
+* For a home user or a commercial property manager to track their properties' energy usages
+and costs to give insights into how they could optmize their properties' energy consumption.
 ## Potential areas for added functionality
 * The ability to see how much energy you used for a specific month compared to
 national average.
@@ -57,4 +56,3 @@ added in the future that would be useful to the user.
 * Ability to delete a user's entire account.
 * The ability to MOVE utility bills or appliances between properties.
 This is currently not supported.
-## No future uses or work can be documented if justification is provided.
