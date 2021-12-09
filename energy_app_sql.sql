@@ -123,7 +123,7 @@ values
 	("OREGON","OR"),
 	("PENNSYLVANIA","PA"),
 	("PUERTO RICO","PR"),
-	("RHODE ISLAND","RI"),
+	("RHODE ISLAND","RI"),
 	("SOUTH CAROLINA","SC"),
 	("SOUTH DAKOTA","SD"),
 	("TENNESSEE","TN"),
@@ -610,13 +610,24 @@ select * from utilityprovider;
 select * from appliance;
 select * from stateavgenergydata;
 select * from state;
-call addUser('dantaki', '1234'); 
+call addUser('dantaki', '1234');
+call addUser('ssaraf', '5678');
 call addProperty('dantaki', '1','2','MA','3');
 call addProperty('dantaki', '1','2','MA','4');
 call addProperty('dantaki', '1','2','MA','5');
+call addProperty('ssaraf', '6','7', 'MA', '8');
+call addProperty('ssaraf', '6','7', 'MA', '9');
+call addProperty('ssaraf', '6','7', 'MA', '10');
 call addProvider('National Electric');
 call addProvider('Eversource');
 call addProvider('Solar');
+call addProvider('Town of Suffolk');
+call addProvider('Unitil');
+call addProvider('Alpha Electric');
 call addBill(1, 2021,'1','2','MA','3', 500,50,'Eversource');
 call addBill(2, 2021,'1','2','MA','3', 500,51,'Eversource');
 call addBill(2, 2021,'1','2','MA','3', 500,51,'Solar');
+call addBill(3, 2021, '6','7','MA','8', 650,65, 'Unitil');
+call addBill(4, 2021, '6','7','MA','8', 750,75, 'Unitil');
+call addBill(4, 2021, '6','7','MA','9', 500,50, 'Solar');
+call addBill(4, 2021, '6','7','MA','9', 300,30, 'Town of Suffolk');
