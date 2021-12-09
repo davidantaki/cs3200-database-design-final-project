@@ -13,12 +13,12 @@ or in a simple text file.
 (backend).
 ## Insights, time management insights, data domain insights etc.
 * We thought our time was managed well to complete this application.
+* About 16 total hours was spent writing the application itself (SQL and Python).
 * The frontend code has a lot of duplication. This is a future improvement
 for the design. But since the focus was on the overall interaction between
 a database and a user application, code resuse was not a priority.
-* The user application code was not tested. This is a future improvement.
-This was not the focus of this application however.
-* About 16 total hours was spent writing the application itself (SQL and Python).
+* The user application code was not tested..unfortuntely. This is a future improvement
+that would make future development significantly faster.
 ## Realized or contemplated alternative design / approaches to the project
 * We purposely made a utilityBill belong to a property and then a utilityProvider
 belong to a utilityBill because we believed this was the simplest approach.
