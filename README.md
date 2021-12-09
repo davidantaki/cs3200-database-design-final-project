@@ -4,7 +4,7 @@ about various properties they may own. This could be used by homeowners,
 commercial property owners, or business owners who may want to track their
 properties' energy usage.
 
-# “Lessons Learned”
+# Lessons Learned
 ## Technical expertise gained
 * More knowledge on how to design and build an application that uses a
 database for storing data as opposed to storing data in the application itself
@@ -36,7 +36,7 @@ better segmented out. i.e. SQL schema should be in one file, procedures in anoth
 code which we have noted as a future improvement to the robustness of this
 application.
 
-# Provide a “Future work” section containing:
+# Future Work
 ## Planned uses of the database
 * For a home user to track their homes energy usage.
 * For a commercial property manager to track their properties' energy usages
