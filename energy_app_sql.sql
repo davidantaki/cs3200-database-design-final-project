@@ -27,6 +27,11 @@ create table if not exists users(
     passwordHash binary(32) not null
 );
 
+create table if not exists state (
+    twoLetterName varchar(2) not null primary key,
+    fullName varchar(256) not null
+);
+
 create table if not exists properties (
     address varchar(256) not null,
     city varchar(128) not null,
@@ -65,10 +70,6 @@ create table if not exists utilityBill (
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-create table if not exists state (
-    twoLetterName varchar(2) not null primary key,
-    fullName varchar(256) not null
-);
 
 -- Add tuples to state that should not be changed.
 insert ignore into state (fullName, twoLetterName)
