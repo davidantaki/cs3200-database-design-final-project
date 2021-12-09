@@ -1,9 +1,14 @@
-# cs3200-database-design-final-project
+# Application Description
+This is a simple application that allows a user to store basic energy usage information
+about various properties they may own. This could be used by homeowners, 
+commercial property owners, or business owners who may want to track their
+properties' energy usage.
 
-# “Lessons Learned” section that contains report sections for the following:
+# “Lessons Learned”
 ## Technical expertise gained
 * More knowledge on how to design and build an application that uses a
-database for storing data as opposed to storing data in the application itself.
+database for storing data as opposed to storing data in the application itself
+or in a simple text file.
 * Learned how to connect a user facing application (frontend) to a database
 (backend).
 ## Insights, time management insights, data domain insights etc.
@@ -13,6 +18,7 @@ for the design. But since the focus was on the overall interaction between
 a database and a user application, code resuse was not a priority.
 * The user application code was not tested. This is a future improvement.
 This was not the focus of this application however.
+* About 16 total hours was spent writing the application itself (SQL and Python).
 ## Realized or contemplated alternative design / approaches to the project
 * We purposely made a utilityBill belong to a property and then a utilityProvider
 belong to a utilityBill because we believed this was the simplest approach.
@@ -26,6 +32,9 @@ utilityBill, and a utilityProvider.
 code. In the future, or if this application were to extend, the code should be
 better segmented out. i.e. SQL schema should be in one file, procedures in another.
 ## Document any code not working in this section
+* All code works as intended that we know of. We did not write tests for our
+code which we have noted as a future improvement to the robustness of this
+application.
 
 # Provide a “Future work” section containing:
 ## Planned uses of the database
@@ -46,4 +55,6 @@ following the philosphy of keeping it simple and not adding features or
 information that are not absolutely necessary. We think more data could be
 added in the future that would be useful to the user.
 * Ability to delete a user's entire account.
+* The ability to MOVE utility bills or appliances between properties.
+This is currently not supported.
 ## No future uses or work can be documented if justification is provided.
