@@ -7,7 +7,12 @@ database for storing data as opposed to storing data in the application itself.
 * Learned how to connect a user facing application (frontend) to a database
 (backend).
 ## Insights, time management insights, data domain insights etc.
-* We thought our time was managed well to complete this project.
+* We thought our time was managed well to complete this application.
+* The frontend code has a lot of duplication. This is a future improvement
+for the design. But since the focus was on the overall interaction between
+a database and a user application, code resuse was not a priority.
+* The user application code was not tested. This is a future improvement.
+This was not the focus of this application however.
 ## Realized or contemplated alternative design / approaches to the project
 * We purposely made a utilityBill belong to a property and then a utilityProvider
 belong to a utilityBill because we believed this was the simplest approach.
@@ -17,6 +22,9 @@ also issues bills to a property (a relationship we did represent).
 We could have made a 3-way relation in a
 separate table which would represent the relationship between a property,
 utilityBill, and a utilityProvider.
+* The code is contained in 2 files only: 1 for SQL, and 1 for python
+code. In the future, or if this application were to extend, the code should be
+better segmented out. i.e. SQL schema should be in one file, procedures in another.
 ## Document any code not working in this section
 
 # Provide a “Future work” section containing:
@@ -33,7 +41,7 @@ on your bills if you have at least 1 year's worth of bills.
 and costs to help optimize which energy source they are using at a given time.
 Such as using stationary storage during peak demand, while using grid power
 during low demand.
-* Only the most basic information for each entity was included in this project,
+* Only the most basic information for each entity was included in this application,
 following the philosphy of keeping it simple and not adding features or
 information that are not absolutely necessary. We think more data could be
 added in the future that would be useful to the user.
