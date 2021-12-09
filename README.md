@@ -4,6 +4,9 @@ about various properties they may own. This could be used by homeowners,
 commercial property owners, or business owners who may want to track their
 properties' energy usage.
 
+Uses MySQL for the database and a Python text based user application.
+pymysql is used for the Python to MySQL connection.
+
 # Lessons Learned
 ## Technical expertise gained
 * More knowledge on how to design and build an application that uses a
@@ -17,7 +20,7 @@ or in a simple text file.
 * The frontend code has a lot of duplication. This is a future improvement
 for the design. But since the focus was on the overall interaction between
 a database and a user application, code resuse was not a priority.
-* The user application code was not tested..unfortuntely. This is a future improvement
+* The user application code was not tested...unfortuntely. This is a future improvement
 that would make future development significantly faster.
 ## Realized or contemplated alternative design / approaches to the project
 * We purposely made a utilityBill belong to a property and then a utilityProvider
@@ -31,6 +34,8 @@ utilityBill, and a utilityProvider.
 * The code is contained in 2 files only: 1 for SQL, and 1 for python
 code. In the future, or if this application were to extend, the code should be
 better segmented out. i.e. SQL schema should be in one file, procedures in another.
+* The MVC model would be ideal to use in the future to separe the view from the model.
+This would also make the code more testable.
 ## Document any code not working in this section
 * All code works as intended that we know of. We did not write tests for our
 code which we have noted as a future improvement to the robustness of this
@@ -43,6 +48,7 @@ and costs to give insights into how they could optmize their properties' energy 
 ## Potential areas for added functionality
 * The ability to see how much energy you used for a specific month compared to
 national average.
+* Ability to compare what your energy cost would be if you moved to a different state.
 * Ability to see how much an appliance you have costs you for a year based
 on your bills if you have at least 1 year's worth of bills.
 * More insights into the users data based on more real time energy market data
