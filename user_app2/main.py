@@ -557,7 +557,7 @@ def add_appliance(cnx, currentUser):
             return
         else:
             try:
-                avgDailyUsageHr = int(avgDailyUsageHr)
+                avgDailyUsageHr = float(avgDailyUsageHr)
             except ValueError:
                 print("Invalid number of hours.")
             else:
@@ -570,7 +570,7 @@ def add_appliance(cnx, currentUser):
             return
         else:
             try:
-                avgDailyUsageHr = int(energyRatingKW)
+                energyRatingKW = float(energyRatingKW)
             except ValueError:
                 print("Invalid energy rating.")
             else:

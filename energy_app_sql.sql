@@ -143,8 +143,8 @@ create table if not exists stateAvgEnergyData (
 
 create table if not exists appliance (
 	applianceName varchar(256) not null,
-    avgDailyUsageHr int not null,
-    energyRatingKW int not null,
+    avgDailyUsageHr float not null,
+    energyRatingKW float not null,
 	address varchar(256) not null,
     city varchar(128) not null,
     state varchar(2) not null,
@@ -492,7 +492,7 @@ delimiter ;
 -- Returns response message, 0 for success or 1 otherwise
 drop procedure if exists addAppliance;
 delimiter $$
-CREATE procedure addAppliance(in _applianceName varchar(256), in _avgDailyUsageHr int, in _energyRatingKW int,
+CREATE procedure addAppliance(in _applianceName varchar(256), in _avgDailyUsageHr float, in _energyRatingKW float,
 	in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
@@ -531,7 +531,7 @@ delimiter ;
 -- Updates the given appliance with the given information. If info is to be the same, this is handled in the frontend.
 drop procedure if exists updateAppliance;
 delimiter $$
-CREATE procedure updateAppliance(in _oldApplianceName varchar(256), in _newApplianceName varchar(256), in _avgDailyUsageHr int, in _energyRatingKW int,
+CREATE procedure updateAppliance(in _oldApplianceName varchar(256), in _newApplianceName varchar(256), in _avgDailyUsageHr float, in _energyRatingKW float,
 	in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN
 	update appliance set applianceName = _newApplianceName, avgDailyUsageHr=_avgDailyUsageHr,energyRatingKW=_energyRatingKW
