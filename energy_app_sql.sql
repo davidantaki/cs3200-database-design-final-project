@@ -21,7 +21,7 @@ show grants for energy_app_user;
 select * from mysql.user;
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- TABLES
-
+drop table if exists appliance;
 drop table if exists utilitybill;
 drop table if exists utilityprovider;
 drop table if exists properties;
@@ -71,7 +71,6 @@ create table if not exists utilityBill (
         REFERENCES utilityProvider (providerName)
         ON UPDATE CASCADE ON DELETE CASCADE
 );
-
 
 create table if not exists state (
     twoLetterName varchar(2) not null primary key,
@@ -172,11 +171,16 @@ delimiter $$
 CREATE procedure addUser(in _username varchar(256), in _pass varchar(256)) 
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
+    declare data_too_long tinyint default false;
+	declare continue handler for 1406 set data_too_long = true;
     declare continue handler for 1062 set duplicate_entry_for_key = true;
 	INSERT INTO users (username, passwordHash) VALUES(_username, md5(_pass));
     
     if duplicate_entry_for_key = true then
 		select 'That user already exists.' as response_msg,
+			1 as response_code;
+	elseif data_too_long = true then
+		select 'Data entered is too long.' as response_msg,
 			1 as response_code;
 	else
 		select 'User added.' as response_msg,
@@ -187,10 +191,10 @@ $$
 delimiter ;
 
 -- TESTS
-select * from users;
-delete from users where username = "testuser";
-call addUser('testuser', '1234');
-delete from users where username = "testuser";
+-- select * from users;
+-- delete from users where username = "testuser";
+-- call addUser('testuser', '1234');
+-- delete from users where username = "testuser";
 --  -------------------------------------------------------------------------------------------------------------------------------
 
 -- Checks whether the given username and password are correct.
@@ -216,12 +220,12 @@ create function checkUserPass(_username varchar(256), _pass varchar(256))
 delimiter ;
 
 -- TESTS
-select * from users;
-delete from users where username = "testuser";
-call addUser('testuser', '1234');
-select checkUserPass("testuser", "1234");	-- should return 0
-select checkUserPass("testuser", "12345");	-- should return -1
-delete from users where username = "testuser";
+-- select * from users;
+-- delete from users where username = "testuser";
+-- call addUser('testuser', '1234');
+-- select checkUserPass("testuser", "1234");	-- should return 0
+-- select checkUserPass("testuser", "12345");	-- should return -1
+-- delete from users where username = "testuser";
 
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- For adding a new property to the database
@@ -231,18 +235,23 @@ delimiter $$
 CREATE procedure addProperty(in _username varchar(256), in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
-    declare user_does_not_exist tinyint default false;
+    declare state_does_not_exist tinyint default false;
+	declare data_too_long tinyint default false;
+	declare continue handler for 1406 set data_too_long = true;
     declare continue handler for 1062 set duplicate_entry_for_key = true;
-    declare continue handler for 1452 set user_does_not_exist = true;
+    declare continue handler for 1452 set state_does_not_exist = true;
     
     
 	INSERT INTO properties (address, city, state, zipcode, username) VALUES(_address, _city, _state, _zipcode, _username);
     
-    if user_does_not_exist = true then
-		select 'The current user does not exist in the database.' as response_msg,
+    if state_does_not_exist = true then
+		select 'The state entered does not exist in the database. Must be the 2 letter state abbreviation.' as response_msg,
 			1 as response_code;
     elseif duplicate_entry_for_key = true then
 		select 'That property already exists.' as response_msg,
+			1 as response_code;
+	elseif data_too_long = true then
+		select 'Data entered is too long.' as response_msg,
 			1 as response_code;
 	else
 		select 'Property added to your portfolio.' as response_msg,
@@ -253,15 +262,36 @@ $$
 delimiter ;
 
 -- TESTS
-select * from users;
+-- select * from users;
+-- select * from properties;
+-- delete from properties where username = "dantaki";
+-- delete from users where username = "dantaki";
+-- call addProperty('dantaki', '1','2','MA','3'); -- should fail
+-- call addUser('dantaki', '1234');	-- should work
+-- call addProperty('dantaki', '1','2','MA','3'); -- should work
+-- call addProperty('dantaki', '1','2','MA','3'); -- should fail
+-- call addProperty('bob', '1','2','MA','3'); -- should fail
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- Updates the given property with the given information. If info is to be the same, this is handled in the frontend.
+drop procedure if exists updateProperty;
+delimiter $$
+CREATE procedure updateProperty(in _username varchar(256), in _oldAddress varchar(256),
+	in _oldCity varchar(128),  in _oldState varchar(2), in _oldZipcode varchar(16),
+    in _newAddress varchar(256), in _newCity varchar(128),  in _newState varchar(2),  in _newZipcode varchar(16))
+BEGIN
+	update properties set address = _newAddress, city=_newCity, state=_newState, zipcode=_newZipcode
+    where address = _oldAddress and city = _oldCity and state = _oldState and zipcode = _oldZipcode;
+    
+	select 'Property updated.' as response_msg,
+		1 as response_code;
+END
+$$
+delimiter ;
+
+-- TESTS
 select * from properties;
-delete from properties where username = "dantaki";
-delete from users where username = "dantaki";
-call addProperty('dantaki', '1','2','MA','3'); -- should fail
-call addUser('dantaki', '1234');	-- should work
-call addProperty('dantaki', '1','2','MA','3'); -- should work
-call addProperty('dantaki', '1','2','MA','3'); -- should fail
-call addProperty('bob', '1','2','MA','3'); -- should fail
+select * from utilitybill;
+call updateProperty('dantaki','1','2','MA','6','1','2','MA','3');
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- For removing a property from the database
 -- Returns response message, 0 for success or 1 otherwise
@@ -270,12 +300,17 @@ delimiter $$
 CREATE procedure removeProperty(in _username varchar(256), in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN
     declare user_does_not_exist tinyint default false;
+	declare data_too_long tinyint default false;
+	declare continue handler for 1406 set data_too_long = true;
     declare continue handler for 1452 set user_does_not_exist = true;
     
     delete from properties where username=_username and _address=address and _city=city and _state=state and _zipcode=zipcode;
     
     if user_does_not_exist = true then
 		select 'The current user does not exist in the database.' as response_msg,
+			1 as response_code;
+	elseif data_too_long = true then
+		select 'Data entered is too long.' as response_msg,
 			1 as response_code;
 	else
 		select 'Property removed from your portfolio.' as response_msg,
@@ -286,14 +321,14 @@ $$
 delimiter ;
 
 -- TESTS
-select * from users;
-select * from properties;
-delete from properties where username = "dantaki";
-delete from users where username = "dantaki";
-call addUser('dantaki', '1234');	-- should work
-call addProperty('dantaki', '1','2','MA','3'); -- should work
-call addProperty('dantaki', '1','2','MA','4'); -- should work
-call removeProperty('dantaki', '1','2','MA','3'); -- should work
+-- select * from users;
+-- select * from properties;
+-- delete from properties where username = "dantaki";
+-- delete from users where username = "dantaki";
+-- call addUser('dantaki', '1234');	-- should work
+-- call addProperty('dantaki', '1','2','MA','3'); -- should work
+-- call addProperty('dantaki', '1','2','MA','4'); -- should work
+-- call removeProperty('dantaki', '1','2','MA','3'); -- should work
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- Returns all properties for a given user
 drop procedure if exists getAllProperties;
@@ -306,18 +341,18 @@ $$
 delimiter ;
 
 -- TESTS
-select * from users;
-select * from properties;
-delete from properties where username = "dantaki";
-delete from users where username = "dantaki";
-call addUser('dantaki', '1234');	-- should work
-call addUser('bob', '1234');	-- should work
-call addProperty('dantaki', '1','2','MA','3'); -- should work
-call addProperty('dantaki', '1','2','MA','4'); -- should work
-call addProperty('bob', '1','2','MA','5'); -- should work
-call getAllProperties('bob');
-call getAllProperties('dantaki');
-call getAllProperties('tim'); -- should just return empty
+-- select * from users;
+-- select * from properties;
+-- delete from properties where username = "dantaki";
+-- delete from users where username = "dantaki";
+-- call addUser('dantaki', '1234');	-- should work
+-- call addUser('bob', '1234');	-- should work
+-- call addProperty('dantaki', '1','2','MA','3'); -- should work
+-- call addProperty('dantaki', '1','2','MA','4'); -- should work
+-- call addProperty('bob', '1','2','MA','5'); -- should work
+-- call getAllProperties('bob');
+-- call getAllProperties('dantaki');
+-- call getAllProperties('tim'); -- should just return empty
 --  -------------------------------------------------------------------------------------------------------------------------------
 
 -- For adding a new utility bill to the database
@@ -329,6 +364,8 @@ CREATE procedure addBill(in _month int, in _year int, in _address varchar(256), 
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
     declare user_does_not_exist tinyint default false;
+	declare data_too_long tinyint default false;
+	declare continue handler for 1406 set data_too_long = true;
     declare continue handler for 1062 set duplicate_entry_for_key = true;
     declare continue handler for 1452 set user_does_not_exist = true;
     
@@ -336,11 +373,11 @@ BEGIN
 	INSERT INTO utilityBill (month, year, address, city, state, zipcode, energyConsumptionKWh, energyCost, providerName)
     VALUES(_month, _year, _address, _city, _state, _zipcode, _energyConsumptionKWh, _energyCost, _providerName);
     
-    -- if user_does_not_exist = true then
--- 		select 'The current user does not exist in the database.' as response_msg,
--- 			1 as response_code;
     if duplicate_entry_for_key = true then
 		select 'That bill already exists.' as response_msg,
+			1 as response_code;
+	elseif data_too_long = true then
+		select 'Data entered is too long.' as response_msg,
 			1 as response_code;
 	else
 		select 'Bill added to your portfolio.' as response_msg,
@@ -349,6 +386,7 @@ BEGIN
 END
 $$
 delimiter ;
+
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- For removing a property from the database
 -- Returns response message, 0 for success or 1 otherwise
@@ -375,12 +413,12 @@ $$
 delimiter ;
 
 -- TESTS
-select * from utilitybill;
-call addBill('1', '2021', '1', '2', 'MA', '3', 50,50,'Eversource');
-call removeBill('1', '2021', '1', '2', 'MA', '3', 'Eversource');
-call removeBill('70', '2021', '1', '2', 'MA', '3', 'Eversource');
-delete from utilitybill where month='1' and year='2021' and address='1'
-		and city='2' and state='MA' and zipcode='3' and providerName = 'Eversource';
+-- select * from utilitybill;
+-- call addBill('1', '2021', '1', '2', 'MA', '3', 50,50,'Eversource');
+-- call removeBill('1', '2021', '1', '2', 'MA', '3', 'Eversource');
+-- call removeBill('70', '2021', '1', '2', 'MA', '3', 'Eversource');
+-- delete from utilitybill where month='1' and year='2021' and address='1'
+-- 		and city='2' and state='MA' and zipcode='3' and providerName = 'Eversource';
 
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- Returns all bills for a given property
@@ -394,8 +432,8 @@ $$
 delimiter ;
 
 -- TESTS
-select * from utilitybill;
-call getAllBills('1','2','MA','3');
+-- select * from utilitybill;
+-- call getAllBills('1','2','MA','3');
 
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- For adding a new utility provider to the database
@@ -406,12 +444,17 @@ CREATE procedure addProvider(_name varchar (256))
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
     declare user_does_not_exist tinyint default false;
+	declare data_too_long tinyint default false;
+	declare continue handler for 1406 set data_too_long = true;
     declare continue handler for 1062 set duplicate_entry_for_key = true;
         
 	INSERT INTO utilityProvider (providerName) VALUES(_name);
 
     if duplicate_entry_for_key = true then
 		select 'That provider already exists.' as response_msg,
+			1 as response_code;
+	elseif data_too_long = true then
+		select 'Data entered is too long.' as response_msg,
 			1 as response_code;
 	else
 		select 'Utility Provider added.' as response_msg,
@@ -433,7 +476,7 @@ $$
 delimiter ;
 
 -- TESTS
-call getAllProviders();
+-- call getAllProviders();
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- -- Returns all utility providers for a specific property
 drop procedure if exists getPropertyProviders;
@@ -446,10 +489,10 @@ $$
 delimiter ;
 
 -- Test
-call addProvider('National Electric');
-call addBill ('5', '2020', '1','2','MA','3', '456', '768', 'National Electric');
-call getPropertyProviders('1','2','MA','3');
-call getAllProviders();
+-- call addProvider('National Electric');
+-- call addBill ('5', '2020', '1','2','MA','3', '456', '768', 'National Electric');
+-- call getPropertyProviders('1','2','MA','3');
+-- call getAllProviders();
 
 --  -------------------------------------------------------------------------------------------------------------------------------
 
@@ -462,6 +505,8 @@ CREATE procedure addAppliance(in _applianceName varchar(256), in _avgDailyUsageH
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
     declare property_does_not_exist tinyint default false;
+	declare data_too_long tinyint default false;
+	declare continue handler for 1406 set data_too_long = true;
     declare continue handler for 1062 set duplicate_entry_for_key = true;
     declare continue handler for 1452 set property_does_not_exist = true;
     
@@ -474,6 +519,9 @@ BEGIN
 	elseif property_does_not_exist = true then
 		select 'That property does not exist.' as response_msg,
 			1 as response_code;
+	elseif data_too_long = true then
+		select 'Data entered is too long.' as response_msg,
+			1 as response_code;
 	else
 		select 'Appliance added to your property.' as response_msg,
 			0 as response_code;	-- on success
@@ -483,10 +531,10 @@ $$
 delimiter ;
 
 -- TESTS
-select * from appliance;
-select * from properties;
-call addAppliance('fridge', 24, 0.400, 1, 2, 'MA', 3);
-call addAppliance('stove', 1, 3, 1, 2, 'MA', 3);
+-- select * from appliance;
+-- select * from properties;
+-- call addAppliance('fridge', 24, 0.400, 1, 2, 'MA', 3);
+-- call addAppliance('stove', 1, 3, 1, 2, 'MA', 3);
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- Updates the given appliance with the given information. If info is to be the same, this is handled in the frontend.
 drop procedure if exists updateAppliance;
@@ -496,13 +544,16 @@ CREATE procedure updateAppliance(in _oldApplianceName varchar(256), in _newAppli
 BEGIN
 	update appliance set applianceName = _newApplianceName, avgDailyUsageHr=_avgDailyUsageHr,energyRatingKW=_energyRatingKW
     where applianceName = _oldApplianceName and address = _address and city = _city and state = _state and zipcode = _zipcode;
+    
+	select 'Appliance updated.' as response_msg,
+		1 as response_code;
 END
 $$
 delimiter ;
 
 -- TESTS
-select * from appliance;
-call updateAppliance('fridge','frdge',24,400,'1','2','MA','3');
+-- select * from appliance;
+-- call updateAppliance('fridge','frdge',24,400,'1','2','MA','3');
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- For removing an appliance from the database
 -- Returns response message, 0 for success or 1 otherwise
@@ -511,12 +562,18 @@ delimiter $$
 CREATE procedure removeAppliance(in _applianceName varchar(256),
 	in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN 
+    declare data_too_long tinyint default false;
+	declare continue handler for 1406 set data_too_long = true;
+    
     if exists (select 1 from appliance where applianceName=_applianceName and address=_address
 		and city=_city and state=_state and zipcode=_zipcode) then
 		delete from appliance where applianceName=_applianceName and address=_address
 		and city=_city and state=_state and zipcode=_zipcode;
 		select 'Appliance removed from your property.' as response_msg,
 			0 as response_code;	-- on success
+	elseif data_too_long = true then
+		select 'Data entered is too long.' as response_msg,
+			1 as response_code;
 	else
 		select 'That appliance does not exist.' as response_msg,
 			1 as response_code;
@@ -526,9 +583,9 @@ $$
 delimiter ;
 
 -- TESTS
-select * from appliance;
-call addAppliance('test', 200.0, 100.0, '1', '2', 'MA', '3');
-call removeAppliance('test', '1', '2', 'MA', '3');
+-- select * from appliance;
+-- call addAppliance('test', 200.0, 100.0, '1', '2', 'MA', '3');
+-- call removeAppliance('test', '1', '2', 'MA', '3');
 
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- Returns all appliances for a given property
@@ -542,16 +599,18 @@ $$
 delimiter ;
 
 -- TESTS
-select * from appliance;
-call getAllAppliances('1','2','MA','3');
-
+-- select * from appliance;
+-- call getAllAppliances('1','2','MA','3');
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- Bulk test tuples
 select * from properties;
 select * from users;
 select * from utilitybill;
 select * from utilityprovider;
-call addUser('dantaki', '1234');
+select * from appliance;
+select * from stateavgenergydata;
+select * from state;
+call addUser('dantaki', '1234'); 
 call addProperty('dantaki', '1','2','MA','3');
 call addProperty('dantaki', '1','2','MA','4');
 call addProperty('dantaki', '1','2','MA','5');

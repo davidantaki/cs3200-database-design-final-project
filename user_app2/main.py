@@ -1,11 +1,5 @@
-import string
-
 import pymysql
 from tabulate import tabulate
-
-
-# TODO: validate all user input to correct lengths (i.e. varchar(255))
-# TODO: add comments
 
 
 # Opens a connection to the energy_app database. A single user account is used for this connection, but multiple
@@ -119,12 +113,18 @@ def main_menu(cnx, currentUser):
         1: "View Properties",
         2: "Add Property",
         3: "Remove Property",
-        4: "View Utility Bills",
-        5: "Add Utility Bill",
-        6: "Remove Utility Bill",
-        7: "View Utility Providers",
-        8: "Add Utility Provider",
-        10: "Logout"
+        4: "Update Property",
+        5: "View Utility Bills",
+        6: "Add Utility Bill",
+        7: "Remove Utility Bill",
+        8: "View Utility Providers",
+        9: "Add Utility Provider",
+        10: "View Appliances",
+        11: "Add Appliance",
+        12: "Remove Appliance",
+        13: "Update Appliance",
+        14: "View "
+        14: "Logout"
     }
 
     while (True):
@@ -143,18 +143,26 @@ def main_menu(cnx, currentUser):
         elif menu_selection == 3:
             remove_property(cnx, currentUser)
         elif menu_selection == 4:
-            view_bills(cnx, currentUser)
+            update_property(cnx, currentUser)
         elif menu_selection == 5:
-            add_bill(cnx, currentUser)
+            view_bills(cnx, currentUser)
         elif menu_selection == 6:
-            remove_bill(cnx, currentUser)
+            add_bill(cnx, currentUser)
         elif menu_selection == 7:
-            view_utility_providers(cnx, currentUser)
+            remove_bill(cnx, currentUser)
         elif menu_selection == 8:
-            add_utility_provider(cnx, currentUser)
+            view_utility_providers(cnx, currentUser)
         elif menu_selection == 9:
-            continue
+            add_utility_provider(cnx, currentUser)
         elif menu_selection == 10:
+            view_appliances(cnx, currentUser)
+        elif menu_selection == 11:
+            add_appliance(cnx, currentUser)
+        elif menu_selection == 12:
+            remove_appliance(cnx, currentUser)
+        elif menu_selection == 13:
+            update_appliance(cnx, currentUser)
+        elif menu_selection == 14:
             return
         else:
             print('Invalid selection.')
@@ -225,6 +233,46 @@ def remove_property(cnx, currentUser):
             result = cur.fetchone()
             print(result["response_msg"])
             return
+
+
+def update_property(cnx, currentUser):
+    # Loop until valid selection or quit
+    while (True):
+        your_properties = view_properties(cnx, currentUser)
+        selection = input("Select the property to update or 'q' to quit: ")
+        # Check if quit
+        if checkQuit(selection):
+            return
+        # Convert selection to integer index
+        selection = int(selection)
+        if not valid_tuple(your_properties, selection):
+            print("Invalid selection.")
+        else:
+            origP = your_properties[selection]
+            break
+
+    address = input("Enter the new address, or leave blank to keep the same: ")
+    city = input("Enter the new city, or leave blank to keep the same: ")
+    state = str.upper(input("Enter the new 2 letter state, or leave blank to keep the same: "))
+    zipcode = input("Enter the new zipcode, or leave blank to keep the same: ")
+
+    # Check for blanks that are to be kept the same
+    if address == "":
+        address = origP["address"]
+    if city == "":
+        city = origP["city"]
+    if state == "":
+        state = origP["state"]
+    if zipcode == "":
+        zipcode = origP["zipcode"]
+
+    cur = cnx.cursor()
+    cur.execute("call updateProperty(%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (currentUser, origP["address"], origP["city"], origP["state"], origP["zipcode"], address, city, state,
+                 zipcode))
+    cnx.commit()
+    result = cur.fetchone()
+    print(result["response_msg"])
 
 
 # Returns a list of bills for the selected property and the selected property info in a dictionary.
@@ -396,7 +444,7 @@ def remove_bill(cnx, currentUser):
             try:
                 selection = int(selection)
             except ValueError:
-                print("Invalid selection. Month must be an integer between 1 and 12")
+                print("Invalid selection.")
             if not valid_tuple(bills, selection):
                 print("Invalid selection.")
             else:
@@ -456,6 +504,208 @@ def remove_utility_provider(cnx, currentUser):
             result = cur.fetchone()
             print(result["response_msg"])
             return
+
+
+def view_appliances(cnx, currentUser):
+    # Loop until valid selection or quit
+    while (True):
+        properties = view_properties(cnx, currentUser)
+        property_selection = input("Select the property to view the appliances of or 'q' to quit: ")
+        # Check if quit
+        if property_selection == 'q' or property_selection == 'Q':
+            return
+        # Convert selection to integer index
+        property_selection = int(property_selection)
+        if property_selection not in range(len(properties)):
+            print("Invalid selection.")
+        else:
+            selected_property = properties[property_selection]
+            print(
+                "Appliances for Property " + selected_property["address"] + ", " + selected_property["city"] + ", " +
+                selected_property["state"] + " " + selected_property["zipcode"] + ": ")
+            cur = cnx.cursor()
+            cur.execute("call getAllAppliances(%s, %s, %s, %s)", (
+                selected_property["address"], selected_property["city"], selected_property["state"],
+                selected_property["zipcode"]))
+            result = cur.fetchall()
+            print(tabulate(result, headers={"applianceName": "Name",
+                                            "avgDailyUsageHr": "Avg Daily Usage (hr)",
+                                            "energyRatingKW": "Energy Rating (KW)"},
+                           floatfmt=".2f", tablefmt="grid", showindex=True))
+            selected_property.update({'appliances': result})
+            return selected_property
+
+
+def add_appliance(cnx, currentUser):
+    # Get appliance name and validate
+    while True:
+        name = input("Enter the appliance name or 'q' to quit: ")
+        if checkQuit(name):
+            return
+        else:
+            break
+
+    # Get average usage
+    while True:
+        avgDailyUsageHr = input("Enter this appliance's average daily usage in hours or 'q' to quit: ")
+        if checkQuit(avgDailyUsageHr):
+            return
+        else:
+            try:
+                avgDailyUsageHr = int(avgDailyUsageHr)
+            except ValueError:
+                print("Invalid number of hours.")
+            else:
+                break
+
+    # Get energy rating
+    while True:
+        energyRatingKW = input("Enter this appliance's energy rating in kilowatts or 'q' to quit: ")
+        if checkQuit(energyRatingKW):
+            return
+        else:
+            try:
+                avgDailyUsageHr = int(energyRatingKW)
+            except ValueError:
+                print("Invalid energy rating.")
+            else:
+                break
+
+    # Get associated property
+    properties = view_properties(cnx, currentUser)
+    while True:
+        property_selection = input("Select the property this appliance is associated with: ")
+        if checkQuit(property_selection):
+            return
+        else:
+            try:
+                property_selection = int(property_selection)
+                if not valid_tuple(properties, property_selection):
+                    print("Invalid selection")
+                else:
+                    break
+            except ValueError:
+                print("Invalid selection.")
+
+    p = properties[property_selection]
+    cur = cnx.cursor()
+    cur.execute("call addAppliance(%s, %s, %s, %s, %s, %s, %s)",
+                (name, avgDailyUsageHr, energyRatingKW, p["address"], p["city"], p["state"], p["zipcode"]))
+    cnx.commit()
+    result = cur.fetchone()
+    print(result["response_msg"])
+
+
+def update_appliance(cnx, currentUser):
+    # Get appliance to update and validate selection
+    while True:
+        property_and_appliances = view_appliances(cnx, currentUser)
+        appliances = property_and_appliances["appliances"]
+        # Check if there are appliances
+        if not appliances:
+            print("There are no appliances for this property.")
+            return
+
+        selection = input("Select the appliance to update or 'q' to quit: ")
+        if checkQuit(selection):
+            return
+        else:
+            try:
+                selection = int(selection)
+            except ValueError:
+                print("Invalid selection.")
+            if not valid_tuple(appliances, selection):
+                print("Invalid selection.")
+            else:
+                old_appliance = appliances[selection]
+                break
+
+    # Get new appliance name and validate
+    while True:
+        newName = input("Enter the new appliance name, or leave blank to keep the same, or 'q' to quit: ")
+        if checkQuit(newName):
+            return
+        elif newName == "":
+            newName = old_appliance["applianceName"]
+            break
+        else:
+            break
+
+    # Get average usage
+    while True:
+        avgDailyUsageHr = input(
+            "Enter this appliance's new average daily usage in hours, or leave blank to keep the same, or 'q' to quit: ")
+        if checkQuit(avgDailyUsageHr):
+            return
+        elif avgDailyUsageHr == "":
+            avgDailyUsageHr = old_appliance["avgDailyUsageHr"]
+            break
+        else:
+            try:
+                avgDailyUsageHr = int(avgDailyUsageHr)
+            except ValueError:
+                print("Invalid number of hours.")
+            else:
+                break
+
+    # Get energy rating
+    while True:
+        energyRatingKW = input(
+            "Enter this appliance's new energy rating in kilowatts, or leave blank to keep the same, or 'q' to quit: ")
+        if checkQuit(energyRatingKW):
+            return
+        elif energyRatingKW == "":
+            energyRatingKW = old_appliance["energyRatingKW"]
+            break
+        else:
+            try:
+                energyRatingKW = int(energyRatingKW)
+            except ValueError:
+                print("Invalid energy rating.")
+            else:
+                break
+
+    cur = cnx.cursor()
+    cur.execute("call updateAppliance(%s, %s, %s, %s, %s, %s, %s, %s)",
+                (old_appliance["applianceName"], newName, avgDailyUsageHr, energyRatingKW,
+                 property_and_appliances["address"], property_and_appliances["city"],
+                 property_and_appliances["state"], property_and_appliances["zipcode"]))
+    cnx.commit()
+    result = cur.fetchone()
+    print(result["response_msg"])
+
+
+def remove_appliance(cnx, currentUser):
+    # Get appliance to remove and validate selection
+    while True:
+        property_and_appliances = view_appliances(cnx, currentUser)
+        appliances = property_and_appliances["appliances"]
+        # Check if there are appliances
+        if not appliances:
+            print("There are no appliances for this property.")
+            return
+
+        selection = input("Select the appliance to remove or 'q' to quit: ")
+        if checkQuit(selection):
+            return
+        else:
+            try:
+                selection = int(selection)
+            except ValueError:
+                print("Invalid selection. Month must be an integer between 1 and 12")
+            if not valid_tuple(appliances, selection):
+                print("Invalid selection.")
+            else:
+                appliance = appliances[selection]
+                cur = cnx.cursor()
+                cur.execute("call removeAppliance(%s, %s, %s, %s, %s)",
+                            (appliance["applianceName"], property_and_appliances["address"],
+                             property_and_appliances["city"],
+                             property_and_appliances["state"], property_and_appliances["zipcode"]))
+                cnx.commit()
+                result = cur.fetchone()
+                print(result["response_msg"])
+                return
 
 
 def main():
