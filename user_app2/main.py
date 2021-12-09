@@ -123,8 +123,9 @@ def main_menu(cnx, currentUser):
         11: "Add Appliance",
         12: "Remove Appliance",
         13: "Update Appliance",
-        14: "View "
-        14: "Logout"
+        14: "View Energy Data for your State",
+        15: "Compare Bill to Avg",
+        16: "Logout"
     }
 
     while (True):
@@ -163,6 +164,10 @@ def main_menu(cnx, currentUser):
         elif menu_selection == 13:
             update_appliance(cnx, currentUser)
         elif menu_selection == 14:
+            get_state_avg_energy_data_input(cnx, currentUser)
+        elif menu_selection == 15:
+            compare_bill_to_avg(cnx, currentUser)
+        elif menu_selection == 16:
             return
         else:
             print('Invalid selection.')
@@ -708,13 +713,78 @@ def remove_appliance(cnx, currentUser):
                 return
 
 
+# Gets and prints the avg energy data from the database of the given state
+def get_state_avg_energy_data_input(cnx, currentUser):
+    while True:
+        state = input("Enter the 2 letter state name you want to get energy data of: ")
+        cur = cnx.cursor()
+        try:
+            cur.execute("call getAvgData(%s)", state)
+            break
+        except pymysql.err.DataError:
+            print("Invalid State. Must be a 2 letter state name."
+                  "")
+
+    result = cur.fetchall()
+    print(tabulate(result, headers={"twoLetterState": "State",
+                                    "avgMonthlyConsumptionKWh": "Avg Monthly Consumption (KWh)",
+                                    "avgPriceCentsPerKWh": "Avg Price (Cents/KWh)",
+                                    "avgMonthlyBillDollars": "Avg Monthly Bill ($)"},
+                   floatfmt=".2f", tablefmt="grid", showindex=True))
+    return result
+
+
+def get_state_avg_energy_data(cnx, currentUser, state):
+    cur = cnx.cursor()
+    try:
+        cur.execute("call getAvgData(%s)", state)
+    except pymysql.err.DataError:
+        print("Invalid State. Must be a 2 letter state name.")
+    return cur.fetchone()
+
+
+def compare_bill_to_avg(cnx, currentUser):
+    # Get bill to compare and validate selection
+    while True:
+        property_and_bills = view_bills(cnx, currentUser)
+        bills = property_and_bills["bills"]
+        # Check if there are bills
+        if not bills:
+            print("There are no bills for this property.")
+            return
+
+        selection = input("Select the bill to compare to avg or 'q' to quit: ")
+        if checkQuit(selection):
+            return
+        else:
+            try:
+                selection = int(selection)
+            except ValueError:
+                print("Invalid selection.")
+            if not valid_tuple(bills, selection):
+                print("Invalid selection.")
+            else:
+                break
+
+    bill = bills[selection]
+    avg_energy_data = get_state_avg_energy_data(cnx, currentUser, property_and_bills["state"])
+    avg_consumption = avg_energy_data["avgMonthlyConsumptionKWh"]
+    your_consumption_KWh = bill["energyConsumptionKWh"]
+    difference = avg_consumption - your_consumption_KWh
+
+    if difference > 0:
+        print("You used " + str(abs(difference)) + "KWh less energy than the average in your state for the month: " +
+              str(bill["month"]) + "/" + str(bill["year"]))
+    else:
+        print("You used " + str(abs(difference)) + "KWh more energy than the average in your state for the month: " +
+              str(bill["month"]) + "/" + str(bill["year"]))
+
+
 def main():
     # Connection to energy_app database
     cnx = openDatabaseUserConnection()
-
     # Login/register menu
     loginRegister(cnx)
-
     # Close connection to database
     cnx.close()
 

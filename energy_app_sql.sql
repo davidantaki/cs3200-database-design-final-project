@@ -602,7 +602,23 @@ delimiter ;
 -- select * from appliance;
 -- call getAllAppliances('1','2','MA','3');
 --  -------------------------------------------------------------------------------------------------------------------------------
--- Bulk test tuples
+-- Returns average data by state
+drop procedure if exists getAvgData;
+delimiter $$
+CREATE procedure getAvgData(in _state varchar(2))
+BEGIN
+	select twoLetterState, avgMonthlyConsumptionKWh, avgPriceCentsPerKWh, avgMonthlyBillDollars from stateavgenergydata
+	where _state=twoLetterState;
+END
+$$
+delimiter ;
+
+-- TESTS
+-- select * from appliance;
+-- call getAvgData('MA');
+-- call getAvgData('TX');
+--  -------------------------------------------------------------------------------------------------------------------------------
+-- Example Tuples
 select * from properties;
 select * from users;
 select * from utilitybill;
