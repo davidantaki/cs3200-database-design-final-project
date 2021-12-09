@@ -1,13 +1,9 @@
 -- David Antaki
 -- Sid Saraf
 -- Database Design (CS3200) Final Project
-
 --  -------------------------------------------------------------------------------------------------------------------------------
 create database if not exists energy_app;
 use energy_app;
---  -------------------------------------------------------------------------------------------------------------------------------
-select * from mysql.user;
-
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- The default SQL user account used for the connection between the user application and the energy_app database.
 -- Different from the user applications user accounts.
@@ -16,9 +12,8 @@ grant select on energy_app.* to 'energy_app_user'@'%';
 grant insert on energy_app.* to 'energy_app_user'@'%';
 grant update on energy_app.* to 'energy_app_user'@'%';
 grant execute on energy_app.* to 'energy_app_user'@'%';
-
-show grants for energy_app_user;
-select * from mysql.user;
+-- show grants for energy_app_user;
+-- select * from mysql.user;
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- TABLES
 drop table if exists appliance;
@@ -47,11 +42,9 @@ create table if not exists properties (
         ON UPDATE RESTRICT ON DELETE RESTRICT
 );
 
-
 create table if not exists utilityProvider (
     providerName varchar(256) not null PRIMARY KEY
 );
-
 
 create table if not exists utilityBill (
     month int not null,
@@ -136,7 +129,6 @@ values
 	("WEST VIRGINIA","WV"),
 	("WISCONSIN","WI"),
 	("WYOMING","WY");
-
 
 create table if not exists stateAvgEnergyData (
 	twoLetterState varchar(2) not null primary key,
