@@ -194,8 +194,8 @@ def add_property(cnx, currentUser):
 
     cur = cnx.cursor()
     try:
-    cur.execute("call addProperty(%s, %s, %s, %s, %s)",
-                (currentUser, address, city, state, zipcode))
+        cur.execute("call addProperty(%s, %s, %s, %s, %s)",
+                    (currentUser, address, city, state, zipcode))
     except pymysql.err.DataError:
         print("Invalid property address.")
     cnx.commit()
@@ -651,7 +651,7 @@ def update_appliance(cnx, currentUser):
             break
         else:
             try:
-                avgDailyUsageHr = int(avgDailyUsageHr)
+                avgDailyUsageHr = float(avgDailyUsageHr)
             except ValueError:
                 print("Invalid number of hours.")
             else:
@@ -668,7 +668,7 @@ def update_appliance(cnx, currentUser):
             break
         else:
             try:
-                energyRatingKW = int(energyRatingKW)
+                energyRatingKW = float(energyRatingKW)
             except ValueError:
                 print("Invalid energy rating.")
             else:
