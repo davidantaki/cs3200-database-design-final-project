@@ -382,6 +382,7 @@ def add_bill(cnx, currentUser):
             return
         elif utility_provider_selection == "add":
             provider = add_utility_provider(cnx, currentUser)
+            break
         else:
             try:
                 utility_provider_selection = int(utility_provider_selection)
