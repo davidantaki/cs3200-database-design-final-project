@@ -7,6 +7,22 @@ properties' energy usage.
 Uses MySQL for the database and a Python text based user application.
 pymysql is used for the Python to MySQL connection.
 
+# Setup and Running the Application
+## Setting up the MySQL database
+* Install the latest version of MySQL workbench: https://dev.mysql.com/downloads/workbench/
+* Create a server instance and connect to it through MySQL.
+* In MySQL workbench, import the database dump filed name energy_app_database_dump.sql by going to Server->Data Import
+* Select "Import from Self-Contained File" and then select energy_app_database_dump.sql dump file.
+* Click start import.
+* This will import the database schema and some example tuples.
+## Running the User Application
+* Install the latest version of Python3: https://www.python.org/downloads/
+* Install the latest version of git to get git bash
+(or install some terminal if you don't have one already): https://git-scm.com/downloads
+* Open a terminal in the root of the submission folder.
+* Start the virtual environment (venv) by running: >source venv/Scripts/activate
+* All project dependencies/libraries are in the virtual environment.
+
 # Lessons Learned
 ## Technical expertise gained
 * More knowledge on how to design and build an application that uses a
