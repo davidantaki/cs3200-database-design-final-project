@@ -27,6 +27,11 @@ create table if not exists users(
     passwordHash binary(32) not null
 );
 
+create table if not exists state (
+    twoLetterName varchar(2) not null primary key,
+    fullName varchar(256) not null
+);
+
 create table if not exists properties (
     address varchar(256) not null,
     city varchar(128) not null,
@@ -65,10 +70,6 @@ create table if not exists utilityBill (
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-create table if not exists state (
-    twoLetterName varchar(2) not null primary key,
-    fullName varchar(256) not null
-);
 
 -- Add tuples to state that should not be changed.
 insert ignore into state (fullName, twoLetterName)
@@ -143,8 +144,8 @@ create table if not exists stateAvgEnergyData (
 
 create table if not exists appliance (
 	applianceName varchar(256) not null,
-    avgDailyUsageHr int not null,
-    energyRatingKW int not null,
+    avgDailyUsageHr float not null,
+    energyRatingKW float not null,
 	address varchar(256) not null,
     city varchar(128) not null,
     state varchar(2) not null,
@@ -281,9 +282,9 @@ $$
 delimiter ;
 
 -- TESTS
-select * from properties;
-select * from utilitybill;
-call updateProperty('dantaki','1','2','MA','6','1','2','MA','3');
+-- select * from properties;
+-- select * from utilitybill;
+-- call updateProperty('dantaki','1','2','MA','6','1','2','MA','3');
 --  -------------------------------------------------------------------------------------------------------------------------------
 -- For removing a property from the database
 -- Returns response message, 0 for success or 1 otherwise
@@ -492,7 +493,7 @@ delimiter ;
 -- Returns response message, 0 for success or 1 otherwise
 drop procedure if exists addAppliance;
 delimiter $$
-CREATE procedure addAppliance(in _applianceName varchar(256), in _avgDailyUsageHr int, in _energyRatingKW int,
+CREATE procedure addAppliance(in _applianceName varchar(256), in _avgDailyUsageHr float, in _energyRatingKW float,
 	in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN
 	declare duplicate_entry_for_key tinyint default false;
@@ -531,7 +532,7 @@ delimiter ;
 -- Updates the given appliance with the given information. If info is to be the same, this is handled in the frontend.
 drop procedure if exists updateAppliance;
 delimiter $$
-CREATE procedure updateAppliance(in _oldApplianceName varchar(256), in _newApplianceName varchar(256), in _avgDailyUsageHr int, in _energyRatingKW int,
+CREATE procedure updateAppliance(in _oldApplianceName varchar(256), in _newApplianceName varchar(256), in _avgDailyUsageHr float, in _energyRatingKW float,
 	in _address varchar(256), in _city varchar(128), in _state varchar(2), in _zipcode varchar(16))
 BEGIN
 	update appliance set applianceName = _newApplianceName, avgDailyUsageHr=_avgDailyUsageHr,energyRatingKW=_energyRatingKW
@@ -618,23 +619,28 @@ select * from utilityprovider;
 select * from appliance;
 select * from stateavgenergydata;
 select * from state;
-call addUser('dantaki', '1234');
-call addUser('ssaraf', '5678');
-call addProperty('dantaki', '1','2','MA','3');
-call addProperty('dantaki', '1','2','MA','4');
-call addProperty('dantaki', '1','2','MA','5');
-call addProperty('ssaraf', '6','7', 'MA', '8');
-call addProperty('ssaraf', '6','7', 'MA', '9');
-call addProperty('ssaraf', '6','7', 'MA', '10');
 call addProvider('National Electric');
 call addProvider('Eversource');
 call addProvider('Solar');
 call addProvider('Town of Suffolk');
 call addProvider('Unitil');
 call addProvider('Alpha Electric');
-call addBill(1, 2021,'1','2','MA','3', 500,50,'Eversource');
-call addBill(2, 2021,'1','2','MA','3', 500,51,'Eversource');
-call addBill(2, 2021,'1','2','MA','3', 500,51,'Solar');
+call addUser('dantaki', '1234');
+call addProperty('dantaki', '38 Calumet St','Boston','MA','02120');
+call addProperty('dantaki', '356 Ridge Rd', 'Aspen', 'CO', '816111');
+call addProperty('dantaki', '4305 Ruben M Torres Blvd','Brownsville','TX','78526');
+call addProperty('dantaki', '1 Rocket Rd','Starbase','TX','78521');
+call addBill(1, 2021,'38 Calumet St','Boston','MA','02120', 756,124.25,'Eversource');
+call addBill(2, 2021,'38 Calumet St','Boston','MA','02120', 819,169.20,'Eversource');
+call addBill(1, 2021, '356 Ridge Rd', 'Aspen', 'CO', '816111', 123,40.10,'Solar');
+call addBill(2, 2021, '356 Ridge Rd', 'Aspen', 'CO', '816111', 313,89.34,'Solar');
+call addAppliance('Fridge', 24, 0.4,'38 Calumet St','Boston','MA','02120');
+call addAppliance('Stove', 1, 3.5,'38 Calumet St','Boston','MA','02120');
+call addAppliance('Dryer', 0.14, 5.5,'38 Calumet St','Boston','MA','02120');
+call addUser('ssaraf', '5678');
+call addProperty('ssaraf', '6','7', 'MA', '8');
+call addProperty('ssaraf', '6','7', 'MA', '9');
+call addProperty('ssaraf', '6','7', 'MA', '10');
 call addBill(3, 2021, '6','7','MA','8', 650,65, 'Unitil');
 call addBill(4, 2021, '6','7','MA','8', 750,75, 'Unitil');
 call addBill(4, 2021, '6','7','MA','9', 500,50, 'Solar');
